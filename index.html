@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c7356">
+<title>Xiǎo Bāng · Test d'écoute</title>
+<style>
+/* Page de test : préparer le modèle (une fois) → choisir une phrase → enregistrer → transcrire sur le téléphone → mesurer */
+:root{--bg:#f4f7f6;--surface:#fff;--fg:#17211d;--muted:#5b6a64;--line:#d9e2de;--accent:#1c7356;--accent-soft:#e0f0ea;--ok:#1d8a4b;--warn:#b45309;--bad:#c8352e;
+  --f-han:"PingFang SC","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei",sans-serif;--f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#101614;--surface:#18211e;--fg:#e5ece9;--muted:#97a6a0;--line:#2a3531;--accent:#4cc39a;--accent-soft:#1a362c;--ok:#4fc883;--warn:#f5b454;--bad:#ff6e66;color-scheme:dark}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;padding:0 16px;padding-top:env(safe-area-inset-top,0px)}
+.app{max-width:560px;margin:0 auto;padding-block:18px 60px;display:flex;flex-direction:column;gap:18px}
+h1{margin:0;font-size:1.25rem}h2{margin:0;font-size:1rem}
+.sub{margin:0;color:var(--muted);font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.lab{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.55rem 1rem;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:.5rem .6rem;max-width:100%}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.status{font-size:.88rem;color:var(--muted)}
+.target{font-family:var(--f-han);font-size:1.6rem;line-height:1.35}
+.py{font-weight:600;font-size:.95rem}.fr{color:var(--muted);font-size:.9rem}
+.rec{width:100%;padding:1.1rem;font-size:1.1rem;border-radius:16px;border:0;background:var(--accent);color:var(--bg);font-weight:700;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.rec.on{background:var(--bad)}
+.rec:disabled{opacity:.45}
+.heard{font-family:var(--f-han);font-size:1.5rem;line-height:1.35;min-height:1.4em}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.m{background:var(--bg);border-radius:10px;padding:.5rem .6rem}.m b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums}.m small{color:var(--muted);font-size:.72rem}
+.kws{display:flex;flex-wrap:wrap;gap:6px}.kw{font-family:var(--f-han);border-radius:8px;padding:.15rem .5rem;font-size:1rem}
+.kw.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.kw.no{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad);text-decoration:line-through}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--bad)}.dot.ok{background:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}th,td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}.tw{overflow-x:auto}
+.han{font-family:var(--f-han)}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>小帮 · Test d'écoute hors ligne</h1>
+    <p class="sub">Le téléphone écoute du chinois et le transcrit lui-même, sans internet. On mesure la vitesse et la précision.</p>
+  </header>
+
+  <section class="card" aria-labelledby="s1">
+    <span class="lab">Étape 1 · une seule fois, en Wi-Fi</span>
+    <h2 id="s1">Préparer le modèle d'écoute</h2>
+    <div class="row">
+      <label for="size" class="status">Modèle Whisper</label>
+      <select id="size">
+        <option value="tiny">Tiny · ~40 Mo · le plus rapide</option>
+        <option value="base" selected>Base · ~80 Mo · bon compromis</option>
+        <option value="small">Small · ~250 Mo · le plus précis</option>
+      </select>
+    </div>
+    <div class="row"><button class="btn primary" id="load" type="button">Préparer</button><span class="status" id="loadStatus">Pas encore préparé</span></div>
+    <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+    <p class="note"><span class="dot" id="netDot"></span><span id="net">…</span></p>
+  </section>
+
+  <section class="card" aria-labelledby="s2">
+    <span class="lab">Étape 2 · en mode avion</span>
+    <h2 id="s2">Choisir une phrase et l'enregistrer</h2>
+    <select id="phrase" aria-label="Phrase de test"></select>
+    <div class="target" id="tZh"></div>
+    <div class="py" id="tPy"></div>
+    <div class="fr" id="tFr"></div>
+    <p class="note">Fais-la dire par une personne qui parle chinois, ou lis-la toi-même. Appuie une fois pour démarrer, une fois pour arrêter.</p>
+    <button class="rec" id="rec" type="button" disabled>Préparer d'abord le modèle</button>
+  </section>
+
+  <section class="card" aria-labelledby="s3" id="resCard" hidden>
+    <span class="lab">Étape 3</span>
+    <h2 id="s3">Ce que le téléphone a entendu</h2>
+    <div class="heard" id="heard"></div>
+    <div class="metrics">
+      <div class="m"><b id="mTime">–</b><small>temps de calcul</small></div>
+      <div class="m"><b id="mAcc">–</b><small>caractères justes</small></div>
+      <div class="m"><b id="mKw">–</b><small>mots clés trouvés</small></div>
+    </div>
+    <div class="kws" id="kws"></div>
+  </section>
+
+  <section class="card" aria-labelledby="s4">
+    <span class="lab">Bilan</span>
+    <h2 id="s4">Résultats de la session</h2>
+    <div class="tw"><table><thead><tr><th>Phrase</th><th>Entendu</th><th>Temps</th><th>Justes</th></tr></thead><tbody id="log"><tr><td colspan="4" class="status">Aucun essai pour l'instant.</td></tr></tbody></table></div>
+    <div class="row"><button class="btn" id="copy" type="button">Copier les résultats</button><span class="status" id="copyStatus"></span></div>
+    <p class="note">Colle les résultats dans la conversation avec Claude pour qu'on décide du modèle à embarquer.</p>
+  </section>
+</div>
+
+<script type="module">
+import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js";
+env.allowLocalModels = false;   // modèles téléchargés une fois puis gardés dans le cache du navigateur
+env.useBrowserCache = true;
+
+const PHRASES = [{"s":"Aéroport","zh":"网约车上车点在二楼，出门右转。","py":"Wǎng yuē chē shàng chē diǎn zài èr lóu, chū mén yòu zhuǎn.","fr":"Le point VTC est au 二楼, sortez et tournez à droite.","kw":["二楼","出门","右转"]},{"s":"Aéroport","zh":"在停车场负一楼。","py":"Zài tíng chē chǎng fù yī lóu.","fr":"Au parking, niveau -1.","kw":["停车场","负一楼"]},{"s":"Aéroport","zh":"一直走，跟着网约车的牌子走。","py":"Yì zhí zǒu, gēn zhe wǎng yuē chē de pái zi zǒu.","fr":"Allez tout droit, suivez les panneaux 网约车.","kw":["一直走","牌子"]},{"s":"Aéroport","zh":"我不知道，你问一下服务台吧。","py":"Wǒ bù zhī dào, nǐ wèn yí xià fú wù tái ba.","fr":"Je ne sais pas, demandez au comptoir d'information.","kw":["服务台"]},{"s":"Aéroport","zh":"出租车在一楼，到达层外面。","py":"Chū zū chē zài yī lóu, dào dá céng wài miàn.","fr":"Au 一楼, devant le niveau des arrivées.","kw":["一楼","到达","外面"]},{"s":"Aéroport","zh":"出门左转，排队就行。","py":"Chū mén zuǒ zhuǎn, pái duì jiù xíng.","fr":"Sortez à gauche et faites la queue.","kw":["左转","排队"]},{"s":"Aéroport","zh":"地铁在负二楼，跟着标志走。","py":"Dì tiě zài fù èr lóu, gēn zhe biāo zhì zǒu.","fr":"Le métro est au niveau -2, suivez les panneaux.","kw":["负二楼","标志"]},{"s":"Aéroport","zh":"坐电梯下去就到了。","py":"Zuò diàn tī xià qu jiù dào le.","fr":"Prenez l'ascenseur et descendez, c'est là.","kw":["电梯","下去"]},{"s":"Aéroport","zh":"在那边，左转就到。","py":"Zài nà biān, zuǒ zhuǎn jiù dào.","fr":"Par là, tournez à gauche, c'est tout près.","kw":["那边","左转"]},{"s":"Aéroport","zh":"行李提取处在一楼。","py":"Xíng li tí qǔ chù zài yī lóu.","fr":"Le retrait des bagages est au rez-de-chaussée.","kw":["行李提取处","一楼"]},{"s":"Aéroport","zh":"到达大厅有营业厅，带上护照。","py":"Dào dá dà tīng yǒu yíng yè tīng, dài shang hù zhào.","fr":"Boutique d'opérateur dans le hall des arrivées ; prenez votre passeport.","kw":["到达大厅","营业厅","护照"]},{"s":"Aéroport","zh":"到达大厅有银行，也可以用自动取款机。","py":"Dào dá dà tīng yǒu yín háng, yě kě yǐ yòng zì dòng qǔ kuǎn jī.","fr":"Une banque dans le hall des arrivées, ou un distributeur.","kw":["银行","取款机"]},{"s":"Chauffeur DiDi","zh":"好的，我五分钟后到。","py":"Hǎo de, wǒ wǔ fēn zhōng hòu dào.","fr":"D'accord, j'arrive dans 5 minutes.","kw":["五分钟后"]},{"s":"Chauffeur DiDi","zh":"我到了，你在哪儿？","py":"Wǒ dào le, nǐ zài nǎr?","fr":"Je suis arrivé, où êtes-vous ?","kw":["我到了","你在哪儿"]},{"s":"Chauffeur DiDi","zh":"我在上车点，白色的车。","py":"Wǒ zài shàng chē diǎn, bái sè de chē.","fr":"Je suis au point de prise en charge, voiture blanche.","kw":["上车点","白色"]},{"s":"Chauffeur DiDi","zh":"尾号是八六三。","py":"Wěi hào shì bā liù sān.","fr":"Elle finit par 8-6-3.","kw":["尾号","八六三"]},{"s":"Chauffeur DiDi","zh":"好，我等你。","py":"Hǎo, wǒ děng nǐ.","fr":"D'accord, je t'attends.","kw":["等"]},{"s":"Chauffeur DiDi","zh":"好的，大概四十分钟。","py":"Hǎo de, dà gài sì shí fēn zhōng.","fr":"D'accord, environ 40 minutes.","kw":["大概","四十分钟"]},{"s":"Transports","zh":"几点的？","py":"Jǐ diǎn de?","fr":"Pour quelle heure ?","kw":["几点"]},{"s":"Transports","zh":"高铁二等座，五百五十三块。","py":"Gāo tiě èr děng zuò, wǔ bǎi wǔ shí sān kuài.","fr":"Train rapide, 2de classe : 553 yuans.","kw":["高铁","二等座"]},{"s":"Transports","zh":"到，坐五站就到了。","py":"Dào, zuò wǔ zhàn jiù dào le.","fr":"Oui, c'est à 5 stations.","kw":["站"]},{"s":"Transports","zh":"不到，你要在下一站换乘二号线。","py":"Bú dào, nǐ yào zài xià yí zhàn huàn chéng èr hào xiàn.","fr":"Non, changez à la prochaine station pour la ligne 2.","kw":["换乘","二号线","下一站"]},{"s":"Transports","zh":"在南京东路站下车。","py":"Zài Nán jīng dōng lù zhàn xià chē.","fr":"Descendez à la station Nanjing Dong Lu.","kw":["下车"]},{"s":"Transports","zh":"在八号站台，先去候车室等。","py":"Zài bā hào zhàn tái, xiān qù hòu chē shì děng.","fr":"Quai 8 ; attendez d'abord dans la salle d'attente.","kw":["站台","候车室"]},{"s":"Transports","zh":"去，两块钱，扫码就行。","py":"Qù, liǎng kuài qián, sǎo mǎ jiù xíng.","fr":"Oui, 2 yuans ; scannez le QR code.","kw":["扫码"]},{"s":"Transports","zh":"大概半个小时。","py":"Dà gài bàn ge xiǎo shí.","fr":"Environ une demi-heure.","kw":["半个小时","大概"]},{"s":"Hôtel","zh":"请给我看一下您的护照。","py":"Qǐng gěi wǒ kàn yí xià nín de hù zhào.","fr":"Montrez-moi votre passeport, s'il vous plaît.","kw":["护照","看一下"]},{"s":"Hôtel","zh":"需要交五百块押金。","py":"Xū yào jiāo wǔ bǎi kuài yā jīn.","fr":"Il faut verser une caution de 500 yuans.","kw":["押金","交"]},{"s":"Hôtel","zh":"早上七点到十点，在二楼餐厅。","py":"Zǎo shang qī diǎn dào shí diǎn, zài èr lóu cān tīng.","fr":"De 7 h à 10 h, dans la salle du 二楼 (1er étage).","kw":["餐厅","七点到十点"]},{"s":"Hôtel","zh":"密码在房卡上面。","py":"Mì mǎ zài fáng kǎ shàng miàn.","fr":"Le mot de passe est sur la carte de la chambre.","kw":["密码","房卡"]},{"s":"Hôtel","zh":"好的，马上派人去看。","py":"Hǎo de, mǎ shàng pài rén qù kàn.","fr":"D'accord, on envoie quelqu'un tout de suite.","kw":["坏了","空调"]},{"s":"Hôtel","zh":"好的，请把房卡给我。","py":"Hǎo de, qǐng bǎ fáng kǎ gěi wǒ.","fr":"D'accord, rendez-moi la carte de la chambre.","kw":["退房","房卡"]},{"s":"Hôtel","zh":"可以，抬头写什么？","py":"Kě yǐ, tái tóu xiě shén me?","fr":"Oui, à quel nom (en-tête) ?","kw":["发票","抬头"]},{"s":"Restaurant","zh":"请这边坐。","py":"Qǐng zhè biān zuò.","fr":"Par ici, asseyez-vous.","kw":["这边"]},{"s":"Restaurant","zh":"现在没有位子，要等十分钟。","py":"Xiàn zài méi yǒu wèi zi, yào děng shí fēn zhōng.","fr":"Pas de place pour l'instant, il faut attendre 10 minutes.","kw":["位子","等"]},{"s":"Restaurant","zh":"扫桌上的二维码点菜。","py":"Sǎo zhuō shang de èr wéi mǎ diǎn cài.","fr":"Scannez le QR code sur la table pour commander.","kw":["二维码","点菜"]},{"s":"Restaurant","zh":"我们的红烧肉很有名。","py":"Wǒ men de hóng shāo ròu hěn yǒu míng.","fr":"Notre porc braisé est très réputé.","kw":["红烧肉","有名"]},{"s":"Restaurant","zh":"好的，微辣可以吗？","py":"Hǎo de, wēi là kě yǐ ma?","fr":"D'accord, légèrement épicé, ça va ?","kw":["辣","微辣"]},{"s":"Restaurant","zh":"这个菜没有猪肉。","py":"Zhè ge cài méi yǒu zhū ròu.","fr":"Ce plat ne contient pas de porc.","kw":["猪肉","没有"]},{"s":"Restaurant","zh":"一共二百八十块，扫码还是现金？","py":"Yí gòng èr bǎi bā shí kuài, sǎo mǎ hái shi xiàn jīn?","fr":"280 yuans au total ; QR code ou espèces ?","kw":["一共","还是","现金"]},{"s":"Restaurant","zh":"随意，随意。","py":"Suí yì, suí yì.","fr":"Bois à ton rythme (pas obligé de finir le verre).","kw":["随意"]},{"s":"Tourisme","zh":"一百二十块，请出示护照。","py":"Yì bǎi èr shí kuài, qǐng chū shì hù zhào.","fr":"120 yuans, montrez votre passeport.","kw":["门票","出示"]},{"s":"Tourisme","zh":"今天的票卖完了，要提前预约。","py":"Jīn tiān de piào mài wán le, yào tí qián yù yuē.","fr":"Les billets du jour sont épuisés, il faut réserver à l'avance.","kw":["卖完了","提前","预约"]},{"s":"Tourisme","zh":"下午五点关门，四点停止入场。","py":"Xià wǔ wǔ diǎn guān mén, sì diǎn tíng zhǐ rù chǎng.","fr":"Fermeture à 17 h, dernière entrée à 16 h.","kw":["关门","停止入场"]},{"s":"Tourisme","zh":"有语音导览，租金二十块。","py":"Yǒu yǔ yīn dǎo lǎn, zū jīn èr shí kuài.","fr":"Il y a un audioguide, 20 yuans de location.","kw":["语音导览","讲解"]},{"s":"Tourisme","zh":"可以，但是不能用闪光灯。","py":"Kě yǐ, dàn shì bù néng yòng shǎn guāng dēng.","fr":"Oui, mais sans flash.","kw":["拍照","闪光灯"]},{"s":"Tourisme","zh":"好啊，一、二、三，茄子！","py":"Hǎo a, yī, èr, sān, qié zi!","fr":"D'accord : un, deux, trois… « cheese » !","kw":["照片","茄子"]},{"s":"Tourisme","zh":"不远，走路十分钟。","py":"Bù yuǎn, zǒu lù shí fēn zhōng.","fr":"Pas loin, 10 minutes à pied.","kw":["走路"]},{"s":"Tourisme","zh":"挺远的，最好打车。","py":"Tǐng yuǎn de, zuì hǎo dǎ chē.","fr":"Assez loin, mieux vaut prendre un taxi.","kw":["挺","打车"]},{"s":"Tourisme","zh":"一定要去长城和故宫。","py":"Yí dìng yào qù Cháng chéng hé Gù gōng.","fr":"Allez absolument à la Grande Muraille et à la Cité interdite.","kw":["一定","长城","故宫"]},{"s":"Tourisme","zh":"你要去哪儿？我给你指路。","py":"Nǐ yào qù nǎr? Wǒ gěi nǐ zhǐ lù.","fr":"Où allez-vous ? Je vous montre le chemin.","kw":["迷路","指路","不好意思"]},{"s":"Achats","zh":"三十五块。","py":"Sān shí wǔ kuài.","fr":"35 yuans.","kw":["块"]},{"s":"Achats","zh":"十块钱一斤。","py":"Shí kuài qián yì jīn.","fr":"10 yuans la livre (500 g).","kw":["一斤"]},{"s":"Achats","zh":"两公斤左右。","py":"Liǎng gōng jīn zuǒ yòu.","fr":"Environ 2 kg.","kw":["公斤","左右"]},{"s":"Achats","zh":"最低三十块。","py":"Zuì dī sān shí kuài.","fr":"Au minimum 30 yuans.","kw":["最低"]},{"s":"Achats","zh":"买两个可以打九折。","py":"Mǎi liǎng ge kě yǐ dǎ jiǔ zhé.","fr":"Pour deux achetés, −10 %.","kw":["打九折"]},{"s":"Achats","zh":"有，还有黑色和白色。","py":"Yǒu, hái yǒu hēi sè hé bái sè.","fr":"Oui, il y a aussi noir et blanc.","kw":["黑色","白色"]},{"s":"Achats","zh":"不能刷卡，可以用支付宝。","py":"Bù néng shuā kǎ, kě yǐ yòng Zhī fù bǎo.","fr":"Pas de carte, mais Alipay oui.","kw":["支付宝","刷卡"]},{"s":"Fournisseur","zh":"单价十二块，含税。","py":"Dān jià shí èr kuài, hán shuì.","fr":"12 yuans l'unité, taxes comprises.","kw":["单价","含税"]},{"s":"Fournisseur","zh":"看数量，一千个以上可以便宜。","py":"Kàn shù liàng, yì qiān ge yǐ shàng kě yǐ pián yi.","fr":"Ça dépend de la quantité ; au-delà de 1 000, c'est moins cher.","kw":["数量","以上"]},{"s":"Fournisseur","zh":"起订量是五百个。","py":"Qǐ dìng liàng shì wǔ bǎi ge.","fr":"Le minimum de commande est de 500 pièces.","kw":["起订量"]},{"s":"Fournisseur","zh":"净重三百克，毛重三百五十克。","py":"Jìng zhòng sān bǎi kè, máo zhòng sān bǎi wǔ shí kè.","fr":"Poids net 300 g, poids brut 350 g.","kw":["净重","毛重","克"]},{"s":"Fournisseur","zh":"长三十厘米，宽二十厘米。","py":"Cháng sān shí lí mǐ, kuān èr shí lí mǐ.","fr":"30 cm de long, 20 cm de large.","kw":["尺寸","厘米","宽"]},{"s":"Fournisseur","zh":"好的，我微信发给你。","py":"Hǎo de, wǒ Wēi xìn fā gěi nǐ.","fr":"D'accord, je te l'envoie sur WeChat.","kw":["技术参数","微信"]},{"s":"Fournisseur","zh":"不锈钢的，质量很好。","py":"Bú xiù gāng de, zhì liàng hěn hǎo.","fr":"En acier inoxydable, très bonne qualité.","kw":["不锈钢","质量","材料"]},{"s":"Fournisseur","zh":"可以，样品免费，运费你出。","py":"Kě yǐ, yàng pǐn miǎn fèi, yùn fèi nǐ chū.","fr":"Oui, l'échantillon est gratuit, les frais de port sont pour vous.","kw":["样品","免费","运费"]},{"s":"Fournisseur","zh":"下单后十五天交货。","py":"Xià dān hòu shí wǔ tiān jiāo huò.","fr":"Livraison 15 jours après la commande.","kw":["交货","下单"]},{"s":"Fournisseur","zh":"先付百分之三十定金，发货前付尾款。","py":"Xiān fù bǎi fēn zhī sān shí dìng jīn, fā huò qián fù wěi kuǎn.","fr":"30 % d'acompte d'abord, le solde avant l'expédition.","kw":["定金","尾款","发货"]},{"s":"Fournisseur","zh":"可以，五百个以上可以定制。","py":"Kě yǐ, wǔ bǎi ge yǐ shàng kě yǐ dìng zhì.","fr":"Oui, personnalisation possible à partir de 500 pièces.","kw":["定制"]},{"s":"Fournisseur","zh":"好的，有问题随时微信联系。","py":"Hǎo de, yǒu wèn tí suí shí Wēi xìn lián xì.","fr":"D'accord, contactez-moi sur WeChat quand vous voulez.","kw":["联系","随时"]}];
+const $ = id => document.getElementById(id);
+// Whisper écrit parfois en caractères traditionnels : on les ramène au simplifié (caractères des phrases de test)
+const T2S = {"網":"网","約":"约","車":"车","點":"点","樓":"楼","門":"门","轉":"转","場":"场","負":"负","著":"着","問":"问","務":"务","臺":"台","達":"达","層":"层","隊":"队","鐵":"铁","標":"标","電":"电","邊":"边","處":"处","廳":"厅","營":"营","業":"业","帶":"带","護":"护","銀":"银","動":"动","機":"机","鍾":"钟","後":"后","兒":"儿","號":"号","幾":"几","塊":"块","換":"换","線":"线","東":"东","兩":"两","錢":"钱","掃":"扫","碼":"码","個":"个","時":"时","請":"请","給":"给","馬":"马","壞":"坏","調":"调","頭":"头","寫":"写","麼":"么","發":"发","這":"这","現":"现","沒":"没","維":"维","們":"们","紅":"红","燒":"烧","嗎":"吗","豬":"猪","還":"还","隨":"随","賣":"卖","預":"预","關":"关","語":"语","導":"导","覽":"览","講":"讲","閃":"闪","燈":"灯","遠":"远","長":"长","宮":"宫","買":"买","寶":"宝","單":"单","價":"价","稅":"税","數":"数","訂":"订","淨":"净","釐":"厘","寬":"宽","術":"术","參":"参","鏽":"锈","鋼":"钢","質":"质","樣":"样","費":"费","運":"运","貨":"货","題":"题","聯":"联"};
+const toSimp = s => [...s].map(c => T2S[c] || c).join("");
+let asr = null, modelName = "", rec = null, chunks = [], stream = null, results = [];
+
+/* --- hors ligne : le service worker garde la page, le moteur et le modèle --- */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+function net(){ const on = navigator.onLine; $("netDot").className = "dot" + (on ? "" : " ok");
+  $("net").textContent = on ? "Connecté. Une fois le modèle prêt, passe en mode avion pour un vrai test hors ligne." : "Mode hors ligne : tout se passe sur le téléphone."; }
+addEventListener("online", net); addEventListener("offline", net); net();
+
+/* --- phrases de test (celles du prototype) --- */
+$("phrase").innerHTML = PHRASES.map((p,i)=>`<option value="${i}">${p.s} · ${p.fr}</option>`).join("");
+function showTarget(){ const p = PHRASES[+$("phrase").value]; $("tZh").textContent = p.zh; $("tPy").textContent = p.py; $("tFr").textContent = p.fr; }
+$("phrase").onchange = showTarget; showTarget();
+
+/* --- étape 1 : charger le modèle --- */
+$("load").onclick = async () => {
+  const size = $("size").value; modelName = "whisper-" + size;
+  $("load").disabled = true; $("size").disabled = true;
+  const files = {};
+  const t0 = performance.now();
+  try {
+    asr = await pipeline("automatic-speech-recognition", "onnx-community/whisper-" + size, {
+      dtype: "q8", device: "wasm",
+      progress_callback: e => {
+        if (e.status === "progress" && e.total) { files[e.file] = [e.loaded, e.total];
+          const l = Object.values(files).reduce((a,b)=>a+b[0],0), t = Object.values(files).reduce((a,b)=>a+b[1],0);
+          $("prog").style.width = (100*l/t).toFixed(0) + "%"; $("loadStatus").textContent = `Téléchargement… ${(l/1e6).toFixed(0)} / ${(t/1e6).toFixed(0)} Mo`; }
+        if (e.status === "ready") $("loadStatus").textContent = "Initialisation…";
+      }
+    });
+    $("prog").style.width = "100%";
+    $("loadStatus").textContent = `Prêt : ${modelName} (chargé en ${((performance.now()-t0)/1000).toFixed(1)} s)`;
+    $("rec").disabled = false; $("rec").textContent = "Appuie pour parler";
+  } catch (err) {
+    $("loadStatus").textContent = "Échec du chargement : " + (err?.message || err) + ". Vérifie la connexion pour le premier téléchargement.";
+    $("load").disabled = false; $("size").disabled = false;
+  }
+};
+
+/* --- étape 2 : enregistrer --- */
+$("rec").onclick = async () => {
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } }); }
+  catch (e) { alert("Le micro est refusé : autorise-le dans les réglages du navigateur."); return; }
+  chunks = []; rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => { stream.getTracks().forEach(t=>t.stop()); $("rec").classList.remove("on"); transcribe(new Blob(chunks, { type: rec.mimeType })); };
+  rec.start(); $("rec").classList.add("on"); $("rec").textContent = "J'écoute… appuie pour arrêter";
+};
+
+/* --- étape 3 : transcrire sur le téléphone et mesurer --- */
+async function transcribe(blob){
+  $("rec").disabled = true; $("rec").textContent = "Le téléphone réfléchit…";
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  const audio = (await ctx.decodeAudioData(await blob.arrayBuffer())).getChannelData(0);
+  ctx.close();
+  const t0 = performance.now();
+  const out = await asr(audio, { language: "chinese", task: "transcribe", chunk_length_s: 30 });
+  const ms = performance.now() - t0, secs = audio.length / 16000;
+  const p = PHRASES[+$("phrase").value], heard = toSimp((out.text || "").trim());
+  const acc = charAccuracy(p.zh, heard), kwOk = p.kw.map(k => [k, heard.includes(k)]);
+  $("resCard").hidden = false; $("heard").textContent = heard || "(rien entendu)";
+  $("mTime").textContent = (ms/1000).toFixed(1) + " s"; $("mAcc").textContent = Math.round(acc*100) + " %";
+  $("mKw").textContent = kwOk.filter(k=>k[1]).length + " / " + kwOk.length;
+  $("kws").innerHTML = kwOk.map(([k,ok]) => `<span class="kw ${ok?"ok":"no"}">${k}</span>`).join("");
+  results.unshift({ model: modelName, zh: p.zh, heard, ms: Math.round(ms), secs: +secs.toFixed(1), acc: Math.round(acc*100), kw: kwOk.filter(k=>k[1]).length + "/" + kwOk.length, offline: !navigator.onLine });
+  drawLog();
+  $("rec").disabled = false; $("rec").textContent = "Appuie pour parler";
+}
+
+/* précision : part des caractères chinois de la phrase retrouvés au bon endroit (distance d'édition) */
+function charAccuracy(a, b){
+  const A = [...a].filter(c=>/[一-鿿]/.test(c)), B = [...b].filter(c=>/[一-鿿]/.test(c));
+  if (!A.length) return 0;
+  const d = Array.from({length: A.length+1}, (_, i) => [i, ...Array(B.length).fill(0)]);
+  for (let j=1;j<=B.length;j++) d[0][j] = j;
+  for (let i=1;i<=A.length;i++) for (let j=1;j<=B.length;j++)
+    d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (A[i-1]===B[j-1]?0:1));
+  return Math.max(0, 1 - d[A.length][B.length] / A.length);
+}
+function drawLog(){
+  $("log").innerHTML = results.map(r => `<tr><td class="han">${r.zh}</td><td class="han">${r.heard||"–"}</td><td class="n">${(r.ms/1000).toFixed(1)} s<br><small>${r.secs} s d'audio</small></td><td class="n">${r.acc} %<br><small>${r.kw}</small></td></tr>`).join("");
+}
+$("copy").onclick = async () => {
+  const txt = [`Xiao Bang · test d'écoute · ${navigator.userAgent}`, ...results.slice().reverse().map(r =>
+    `${r.model} | ${r.offline?"hors ligne":"en ligne"} | attendu: ${r.zh} | entendu: ${r.heard} | calcul: ${(r.ms/1000).toFixed(1)} s pour ${r.secs} s d'audio | justes: ${r.acc} % | mots clés: ${r.kw}`)].join("\n");
+  try { await navigator.clipboard.writeText(txt); $("copyStatus").textContent = "Copié."; }
+  catch { $("copyStatus").textContent = "Copie impossible : fais une capture d'écran du tableau."; }
+};
+</script>
+</body>
+</html>
